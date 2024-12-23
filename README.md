@@ -1,4 +1,4 @@
-# Cloudflare Workers OpenAPI 3.1
+# OpenAPI Worker for Portfolio-v2 project
 
 This is a Cloudflare Worker with OpenAPI 3.1 using [chanfana](https://github.com/cloudflare/chanfana) and [Hono](https://github.com/honojs/hono).
 
