@@ -10,5 +10,11 @@ enabled = true
 # D1 database
 [[d1_databases]]
 binding = "DB"
+database_name = "minigame-db-local"
+database_id = "${local_db_id}"
+
+[env.production]
+[[d1_databases]]
+binding = "DB"
 database_name = "minigame-db"
-database_id = "${database_id}"
+database_id = "${prod_db_id}"
