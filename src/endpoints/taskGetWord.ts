@@ -62,12 +62,13 @@ export class TaskGetWord extends OpenAPIRoute {
   };
 
   async handle(c) {
-    // Get today's date
+    // Get today's date & db string
     const today = new Date().toISOString().split("T")[0];
+    const db = c.env.DB_PROD || c.env.DB_LOCAL; 
 
     try {
       // Check if the word for today exists in the database
-      const result = await c.env.DB.prepare(
+      const result = await db.prepare(
         "SELECT word, definition, type FROM words_database WHERE date = ?"
       )
         .bind(today)
@@ -118,7 +119,7 @@ export class TaskGetWord extends OpenAPIRoute {
         dictData[0]?.meanings[0]?.partOfSpeech || null;
 
       // Save the word to the database
-      await c.env.DB.prepare(
+      await db.prepare(
         "INSERT INTO words_database (date, word, definition, type) VALUES (?, ?, ?, ?)"
       )
         .bind(today, randomWord, definition, partOfSpeech)
