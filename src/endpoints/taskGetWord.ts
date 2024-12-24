@@ -64,7 +64,11 @@ export class TaskGetWord extends OpenAPIRoute {
   async handle(c) {
     // Get today's date & db string
     const today = new Date().toISOString().split("T")[0];
+
     const db = c.env.DB_PROD || c.env.DB_DEV; 
+    if (!db) {
+      throw new Error("Database binding is not defined. Check your wrangler.toml configuration.");
+    }
 
     try {
       // Check if the word for today exists in the database

@@ -12,8 +12,15 @@ This is an API project made to service requests to my portfolio, mainly for mini
 
 ## Local database generation
 
-1. npx wrangler d1 create minigame-db
-2. npx wrangler d1 execute minigame-db --command "CREATE TABLE words_database (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE, word TEXT NOT NULL, definition TEXT, type TEXT);"
+1. ```wrangler d1 execute minigame-db-local --local --command "
+CREATE TABLE words_database (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT UNIQUE NOT NULL,
+    word TEXT NOT NULL,
+    definition TEXT,
+    type TEXT
+);"```
+2. Test connection: ```wrangler d1 execute minigame-db-local --local --command "SELECT * FROM words_database;"```
 
 ## Project commands
 
