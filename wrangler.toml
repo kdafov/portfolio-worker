@@ -1,20 +1,14 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "word-service"
+name = "kdafov-services-worker"
 main = "src/index.ts"
-compatibility_date = "2024-12-18"
+compatibility_date = "2024-12-24"
 
 # Workers Logs
 [observability.logs]
 enabled = true
 
-# Development Environment
-[[env.dev.d1_databases]]
-binding = "DB_DEV"
-database_name = "minigame-db-local"
-database_id = "${local_db_id}"
-
-# Production Environment
-[[env.production.d1_databases]]
-binding = "DB_PROD"
-database_name = "minigame-db"
-database_id = "${prod_db_id}"
+# Database
+[[d1_databases]]
+binding = "DB"
+database_name = "${db_name}"
+database_id = "${id}"

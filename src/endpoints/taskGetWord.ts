@@ -12,7 +12,7 @@ export class TaskGetWord extends OpenAPIRoute {
         content: {
           "application/json": {
             schema: z.object({
-              success: z.number(),
+              status: z.number(),
               word: z.string(),
               definition: z.string() || z.null(),
               type: z.string() || z.null(),
@@ -20,7 +20,7 @@ export class TaskGetWord extends OpenAPIRoute {
             examples: {
               not_null: {
                 value: {
-                  success: 200,
+                  status: 200,
                   word: "metaphor",
                   definition:
                     "A figure of speech in which a word or phrase is applied to an object or action to which it is not literally applicable.",
@@ -29,7 +29,7 @@ export class TaskGetWord extends OpenAPIRoute {
               },
               null: {
                 value: {
-                  success: 200,
+                  status: 200,
                   word: "metaphor",
                   definition: null,
                   type: null,
@@ -44,14 +44,14 @@ export class TaskGetWord extends OpenAPIRoute {
         content: {
           "application/json": {
             schema: z.object({
-              success: z.number(),
+              status: z.number(),
               error: z.string(),
             }),
             examples: {
               server_error: {
                 value: {
-                  success: 500,
-                  error: "Failed to fetch dictionary data.",
+                  status: 500,
+                  error: "Failed to fetch data.",
                 },
               },
             },
@@ -61,19 +61,22 @@ export class TaskGetWord extends OpenAPIRoute {
     },
   };
 
-  async handle(c) {
+  async handle(c: any) {
     // Get today's date & db string
     const today = new Date().toISOString().split("T")[0];
 
-    const db = c.env.DB_PROD || c.env.DB_DEV; 
+    const db = c.env.DB; 
     if (!db) {
-      throw new Error("Database binding is not defined. Check your wrangler.toml configuration.");
+      return {
+        status: 500,
+        error: "An error occurred while connecting to the database.",
+      };
     }
 
     try {
       // Check if the word for today exists in the database
       const result = await db.prepare(
-        "SELECT word, definition, type FROM words_database WHERE date = ?"
+        "SELECT word, explanation, wordtype FROM words WHERE datestr = ?"
       )
         .bind(today)
         .first();
@@ -81,16 +84,22 @@ export class TaskGetWord extends OpenAPIRoute {
       if (result) {
         // If the word exists, return it
         return {
-          success: 200,
+          status: 200,
           word: result.word,
-          definition: result.definition,
-          type: result.type,
+          definition: result.explanation,
+          type: result.wordtype,
         };
       }
 
       // Fetch 10 random paragraphs of text from free tier API 
       const response = await fetch("http://metaphorpsum.com/paragraphs/10");
-      if (!response.ok) throw new Error("Failed to fetch text data.");
+      if (!response.ok) {
+        return {
+          status: 500,
+          error: "An error occurred while fetching words.",
+        };
+      }
+
       const textData = await response.text();
 
       // Process the text
@@ -112,8 +121,13 @@ export class TaskGetWord extends OpenAPIRoute {
       const dictResponse = await fetch(
         `https://api.dictionaryapi.dev/api/v2/entries/en/${randomWord}`
       );
-      if (!dictResponse.ok)
-        throw new Error("Failed to fetch dictionary data.");
+      if (!dictResponse.ok) {
+        return {
+          status: 500,
+          error: "An error occurred while fetching word definition.",
+        };
+      }
+
       const dictData = await dictResponse.json();
 
       // Extract definition and part of speech
@@ -124,7 +138,7 @@ export class TaskGetWord extends OpenAPIRoute {
 
       // Save the word to the database
       await db.prepare(
-        "INSERT INTO words_database (date, word, definition, type) VALUES (?, ?, ?, ?)"
+        "INSERT INTO words (datestr, word, explanation, wordtype) VALUES (?, ?, ?, ?)"
       )
         .bind(today, randomWord, definition, partOfSpeech)
         .run();
@@ -137,9 +151,8 @@ export class TaskGetWord extends OpenAPIRoute {
         type: partOfSpeech,
       };
     } catch (error) {
-      console.error(error);
       return {
-        success: 500,
+        status: 500,
         error: "An unknown error occurred.",
       };
     }

@@ -4,32 +4,28 @@ This is a Cloudflare Worker with OpenAPI 3.1 using [chanfana](https://github.com
 
 This is an API project made to service requests to my portfolio, mainly for minigames such as Word Of the Day, and more.
 
-## Secret generation
+Currently providing:
+- Random word (daily)
+- Random coctail (daily)
 
-1. npx wrangler secret put [secret_name]
-2. Follow instructions
-3. Access through "${secret_name}" in the wrangler.toml file
+Available at: https://kdafov-services-worker.kdafov.workers.dev
 
-## Local database generation
+## Setup
+1. (One-time) Create database by running ```npm run create-db```
+2. (One-time) Copy the credentials printed in the console to the `wrangler.toml` file
+3. (One-time) Populate the newly created table with data by running ```npm run populate-db```
+4. Check the database content locally by running ```npm run validate-db-local```
+5. (Optional) Populate the remote database with data by running ```npm run populate-db-remote```
+6. Check the remote database content by running ```npm run validate-db-remote```
 
-1. ```wrangler d1 execute minigame-db-local --local --command "
-CREATE TABLE words_database (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT UNIQUE NOT NULL,
-    word TEXT NOT NULL,
-    definition TEXT,
-    type TEXT
-);"```
-2. Test connection: ```wrangler d1 execute minigame-db-local --local --command "SELECT * FROM words_database;"```
+## Adding environmental variables
+Add ENV by running: `npx wrangler secret put <KEY>`
 
-## Project commands
+Replace ```database_id = ${id}``` in the `wrangler.toml` file with the actual database ID.
 
-1. Run `wrangler login` to login to your Cloudflare account in wrangler
-2. Run `wrangler deploy` to publish the API to Cloudflare Workers
-3. Run `wrangler dev` to start a local instance of the API.
+## Local run
+1. Run ```npm run dev``` to start the development server
+2. Access OpenAPI Swagger endpoints at `http://localhost:8787`
 
-## Project structure
-
-1. Your main router is defined in `src/index.ts`.
-2. Each endpoint has its own file in `src/endpoints/`.
-3. For more information read the [chanfana documentation](https://chanfana.pages.dev/) and [Hono documentation](https://hono.dev/docs).
+## Deployment
+1. Run ```npm run deploy``` to deploy project to Cloudflare

@@ -3,9 +3,13 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy --env production",
+		"create-db": "wrangler d1 create kdafov-worker-db",
+		"populate-db": "wrangler d1 execute kdafov-worker-db --local --file=./schema.sql",
+		"validate-db-local": "wrangler d1 execute kdafov-worker-db --local --command=\"SELECT * FROM words; SELECT * FROM coctails;\"",
+		"populate-db-remote": "wrangler d1 execute kdafov-worker-db --remote --file=./schema.sql",
+		"validate-db-remote": "wrangler d1 execute kdafov-worker-db --remote --command=\"SELECT * FROM words; SELECT * FROM coctails;\"",
+		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
-		"start": "wrangler dev",
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
