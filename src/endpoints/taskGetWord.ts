@@ -173,22 +173,22 @@ export class TaskGetWord extends OpenAPIRoute {
         };
       }
 
-      const dictData = await dictResponse.json();
-      const definitionEntry = dictData[0]?.meanings[0]?.definitions[0];
-      const definition = definitionEntry?.definition || null;
-      const partOfSpeech = dictData[0]?.meanings[0]?.partOfSpeech || null;
+      const dictData: Array<{ meanings: Array<{ definitions: Array<{ definition: string }>, partOfSpeech: string }> }> = await dictResponse.json();
+      const meanings = dictData.flatMap((entry: { meanings: Array<{ definitions: Array<{ definition: string }>, partOfSpeech: string }> }) => entry.meanings || []);
+      const definitions = meanings.map((meaning: { definitions: Array<{ definition: string }> }) => meaning.definitions[0]?.definition || null);
+      const partsOfSpeech = meanings.map((meaning: { partOfSpeech: string }) => meaning.partOfSpeech || null);
 
       await db.prepare(
         "INSERT INTO words (datestr, word, explanation, wordtype) VALUES (?, ?, ?, ?)"
       )
-        .bind(today, randomWord, definition, partOfSpeech)
+        .bind(today, randomWord, JSON.stringify(definitions), JSON.stringify(partsOfSpeech))
         .run();
 
       return {
         status: 200,
         word: randomWord,
-        definition,
-        type: partOfSpeech,
+        definition: definitions,
+        type: partsOfSpeech,
       };
     } catch (error) {
       // [DEV]: Log the error
