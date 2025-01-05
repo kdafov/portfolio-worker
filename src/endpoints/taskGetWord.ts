@@ -62,19 +62,53 @@ export class TaskGetWord extends OpenAPIRoute {
   };
 
   async handle(c: any) {
-    // Get today's date & db string
-    const today = new Date().toISOString().split("T")[0];
+    const FIXED_WORD = "magic";
 
-    const db = c.env.DB; 
+    const today = new Date().toISOString().split("T")[0];
+    const db = c.env.DB;
+
     if (!db) {
+      // [DEV]: Log the error
+      console.error("An error occurred while connecting to the database.");
+
       return {
         status: 500,
         error: "An error occurred while connecting to the database.",
       };
     }
 
+    const fetchWord = async () => {
+      const response = await fetch("http://metaphorpsum.com/paragraphs/10");
+      if (!response.ok) return null;
+
+      const textData = await response.text();
+      let words = textData
+        .split(/\s+/)
+        .map((word) => word.toLowerCase().replace(/[^a-z]/g, ""))
+        .filter(
+          (word) =>
+            word.length > 3 && word.length <= 10 && !stopwords_list.includes(word)
+        );
+
+      words = [...new Set(words)];
+      return words[Math.floor(Math.random() * words.length)];
+    };
+
+    const isWordInLastThreeMonths = async (word: string) => {
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const threeMonthsAgoStr = threeMonthsAgo.toISOString().split("T")[0];
+
+      const result = await db.prepare(
+        "SELECT 1 FROM words WHERE word = ? AND datestr >= ?"
+      )
+        .bind(word, threeMonthsAgoStr)
+        .first();
+
+      return !!result;
+    };
+
     try {
-      // Check if the word for today exists in the database
       const result = await db.prepare(
         "SELECT word, explanation, wordtype FROM words WHERE datestr = ?"
       )
@@ -82,7 +116,6 @@ export class TaskGetWord extends OpenAPIRoute {
         .first();
 
       if (result) {
-        // If the word exists, return it
         return {
           status: 200,
           word: result.word,
@@ -91,37 +124,24 @@ export class TaskGetWord extends OpenAPIRoute {
         };
       }
 
-      // Fetch 10 random paragraphs of text from free tier API 
-      const response = await fetch("http://metaphorpsum.com/paragraphs/10");
-      if (!response.ok) {
-        return {
-          status: 500,
-          error: "An error occurred while fetching words.",
-        };
+      let randomWord = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        randomWord = await fetchWord();
+        if (randomWord && !(await isWordInLastThreeMonths(randomWord))) {
+          break;
+        }
+        if (attempt === 3) {
+          randomWord = FIXED_WORD;
+        }
       }
 
-      const textData = await response.text();
-
-      // Process the text
-      let words = textData
-        .split(/\s+/) // Split text by whitespace
-        .map((word) => word.toLowerCase().replace(/[^a-z]/g, "")) // Normalize words
-        .filter(
-          (word) =>
-            word.length > 3 && word.length <= 10 && !stopwords_list.includes(word)
-        ); // Filter out short, long, and stop words
-
-      // Remove duplicates
-      words = [...new Set(words)];
-
-      // Pick a random word
-      const randomWord = words[Math.floor(Math.random() * words.length)];
-
-      // Fetch data from dictionary API about the random word
       const dictResponse = await fetch(
         `https://api.dictionaryapi.dev/api/v2/entries/en/${randomWord}`
       );
       if (!dictResponse.ok) {
+        // [DEV]: Log the error
+        console.error(dictResponse);
+
         return {
           status: 500,
           error: "An error occurred while fetching word definition.",
@@ -129,21 +149,16 @@ export class TaskGetWord extends OpenAPIRoute {
       }
 
       const dictData = await dictResponse.json();
-
-      // Extract definition and part of speech
       const definitionEntry = dictData[0]?.meanings[0]?.definitions[0];
       const definition = definitionEntry?.definition || null;
-      const partOfSpeech =
-        dictData[0]?.meanings[0]?.partOfSpeech || null;
+      const partOfSpeech = dictData[0]?.meanings[0]?.partOfSpeech || null;
 
-      // Save the word to the database
       await db.prepare(
         "INSERT INTO words (datestr, word, explanation, wordtype) VALUES (?, ?, ?, ?)"
       )
         .bind(today, randomWord, definition, partOfSpeech)
         .run();
 
-      // Return the response
       return {
         status: 200,
         word: randomWord,
@@ -151,6 +166,9 @@ export class TaskGetWord extends OpenAPIRoute {
         type: partOfSpeech,
       };
     } catch (error) {
+      // [DEV]: Log the error
+      console.error(error);
+
       return {
         status: 500,
         error: "An unknown error occurred.",
