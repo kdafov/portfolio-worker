@@ -78,7 +78,7 @@ export class TaskGetWord extends OpenAPIRoute {
     }
 
     const fetchWord = async () => {
-      const response = await fetch("http://metaphorpsum.com/paragraphs/10");
+      const response = await fetch("http://metaphorpsum.com/paragraphs/20/20");
       if (!response.ok) return null;
 
       const textData = await response.text();
