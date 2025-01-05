@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { TaskGetWord } from "./endpoints/taskGetWord";
 import { TaskGetCocktail } from "./endpoints/taskGetCoctail";
+import { TaskCheckWord } from "endpoints/taskCheckWord";
 
 // Start a Hono app
 const app = new Hono();
@@ -25,6 +26,7 @@ const openapi = fromHono(app, {
 // Register OpenAPI endpoints
 openapi.get("/api/word", TaskGetWord);
 openapi.get("/api/coctail", TaskGetCocktail);
+openapi.post("/api/word", TaskCheckWord);
 
 // Export the Hono app
 export default app;
