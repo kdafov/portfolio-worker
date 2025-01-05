@@ -87,11 +87,11 @@ export class TaskGetWord extends OpenAPIRoute {
         .map((word) => word.toLowerCase().replace(/[^a-z]/g, ""))
         .filter(
           (word) =>
-            word.length > 3 && word.length <= 10 && !stopwords_list.includes(word)
+            word.length > 3 && word.length <= 8 && !stopwords_list.includes(word)
         );
 
       words = [...new Set(words)];
-      return words[Math.floor(Math.random() * words.length)];
+      return words;
     };
 
     const isWordInLastThreeMonths = async (word: string) => {
@@ -106,6 +106,28 @@ export class TaskGetWord extends OpenAPIRoute {
         .first();
 
       return !!result;
+    };
+
+    const getRandomWeightedWord = (words: string[]) => {
+      const fiveLetterWords = words.filter(word => word.length === 5);
+      const otherWords = words.filter(word => word.length !== 5);
+
+      const weightedWords = [
+        ...fiveLetterWords.map(word => ({ word, weight: 0.4 / fiveLetterWords.length })),
+        ...otherWords.map(word => ({ word, weight: 0.6 / otherWords.length })),
+      ];
+
+      const random = Math.random();
+      let cumulativeWeight = 0;
+
+      for (const { word, weight } of weightedWords) {
+        cumulativeWeight += weight;
+        if (random < cumulativeWeight) {
+          return word;
+        }
+      }
+
+      return FIXED_WORD;
     };
 
     try {
@@ -126,7 +148,10 @@ export class TaskGetWord extends OpenAPIRoute {
 
       let randomWord = null;
       for (let attempt = 1; attempt <= 3; attempt++) {
-        randomWord = await fetchWord();
+        const words = await fetchWord();
+        if (!words) continue;
+
+        randomWord = getRandomWeightedWord(words);
         if (randomWord && !(await isWordInLastThreeMonths(randomWord))) {
           break;
         }
