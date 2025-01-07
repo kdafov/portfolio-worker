@@ -87,7 +87,7 @@ export class TaskGetWord extends OpenAPIRoute {
         .map((word) => word.toLowerCase().replace(/[^a-z]/g, ""))
         .filter(
           (word) =>
-            word.length > 3 && word.length <= 8 && !stopwords_list.includes(word)
+            word.length > 3 && word.length <= 7 && !stopwords_list.includes(word)
         );
 
       words = [...new Set(words)];
