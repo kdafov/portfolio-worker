@@ -87,7 +87,7 @@ export class TaskGetWord extends OpenAPIRoute {
         .map((word) => word.toLowerCase().replace(/[^a-z]/g, ""))
         .filter(
           (word) =>
-            word.length > 3 && word.length <= 8 && !stopwords_list.includes(word)
+            word.length > 3 && word.length <= 7 && !stopwords_list.includes(word)
         );
 
       words = [...new Set(words)];
@@ -173,23 +173,33 @@ export class TaskGetWord extends OpenAPIRoute {
         };
       }
 
-      const dictData: Array<{ meanings: Array<{ definitions: Array<{ definition: string }>, partOfSpeech: string }> }> = await dictResponse.json();
+      const dictData: Array<{
+        meanings: Array<{
+          definitions: Array<{ definition: string }>;
+          partOfSpeech: string;
+        }>;
+      }> = await dictResponse.json();
+      
       const meanings = dictData.flatMap((entry: { meanings: Array<{ definitions: Array<{ definition: string }>, partOfSpeech: string }> }) => entry.meanings || []);
-      const definitions = meanings.map((meaning: { definitions: Array<{ definition: string }> }) => meaning.definitions[0]?.definition || null);
-      const partsOfSpeech = meanings.map((meaning: { partOfSpeech: string }) => meaning.partOfSpeech || null);
-
+      
+      // Prioritize nouns and pick the first matching definition and type
+      const prioritizedMeaning = meanings.find((meaning: { partOfSpeech: string }) => meaning.partOfSpeech === "noun") || meanings[0];
+      const selectedDefinition = prioritizedMeaning?.definitions[0]?.definition || null;
+      const selectedType = prioritizedMeaning?.partOfSpeech || null;
+      
       await db.prepare(
         "INSERT INTO words (datestr, word, explanation, wordtype) VALUES (?, ?, ?, ?)"
       )
-        .bind(today, randomWord, JSON.stringify(definitions), JSON.stringify(partsOfSpeech))
+        .bind(today, randomWord, selectedDefinition, selectedType)
         .run();
-
+      
       return {
         status: 200,
         word: randomWord,
-        definition: definitions,
-        type: partsOfSpeech,
+        definition: selectedDefinition,
+        type: selectedType,
       };
+      
     } catch (error) {
       // [DEV]: Log the error
       console.error(error);
